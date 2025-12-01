@@ -7,6 +7,7 @@ import {
   updateSession,
 } from '../services/sessionService';
 import { printImage } from '../services/printService';
+import { notifyImageReady, notifyStatusUpdate } from '../services/websocketService';
 
 const getBaseUrl = (port: number | string) =>
   process.env.PUBLIC_BASE_URL || `http://localhost:${port}`;
@@ -26,7 +27,7 @@ export const createSessionHandler = (port: number | string) => (req: Request, re
   });
 };
 
-export const uploadImageHandler = (req: Request, res: Response) => {
+export const uploadImageHandler = (port: number | string) => (req: Request, res: Response) => {
   const { token } = req.params;
   const session = getSession(token);
 
@@ -37,11 +38,20 @@ export const uploadImageHandler = (req: Request, res: Response) => {
     return res.status(400).json({ error: 'No image file uploaded' });
   }
 
+  // Store the image
   setSessionImage(token, req.file.path);
+
+  // Build image URL for frontend
+  const baseUrl = process.env.PUBLIC_BASE_URL || `http://localhost:${port}`;
+  const imageUrl = `${baseUrl}/session/${token}/image`;
+
+  // Notify WebSocket clients (kiosk display) that image is ready
+  notifyImageReady(token, imageUrl);
 
   res.json({
     message: 'Image uploaded successfully',
     status: 'image_ready',
+    imageUrl,
   });
 };
 
@@ -83,12 +93,16 @@ export const printHandler = async (req: Request, res: Response) => {
   }
 
   try {
+    // Update status and notify via WebSocket
     updateSession(token, { status: 'printing' });
+    notifyStatusUpdate(token, 'printing', 'Print job started');
 
     const imagePathToPrint = req.file?.path || session.imagePath!;
     await printImage(imagePathToPrint);
 
+    // Update status and notify via WebSocket
     updateSession(token, { status: 'printed' });
+    notifyStatusUpdate(token, 'printed', 'Print job completed successfully');
 
     res.json({
       message: 'Print job submitted',
@@ -97,6 +111,7 @@ export const printHandler = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     updateSession(token, { status: 'error' });
+    notifyStatusUpdate(token, 'error', 'Failed to print image');
     res.status(500).json({ error: 'Failed to print image' });
   }
 };

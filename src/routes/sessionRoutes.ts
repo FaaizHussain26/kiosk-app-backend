@@ -25,7 +25,7 @@ const upload = multer({ storage });
 
 export const createSessionRouter = (port: number | string) => {
   router.post('/session', createSessionHandler(port));
-  router.post('/session/:token/image', upload.single('image'), uploadImageHandler);
+  router.post('/session/:token/image', upload.single('image'), uploadImageHandler(port));
   router.get('/session/:token/status', getStatusHandler);
   router.get('/session/:token/image', getImageHandler);
   router.post('/session/:token/print', upload.single('image'), printHandler);

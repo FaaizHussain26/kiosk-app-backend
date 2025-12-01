@@ -1,11 +1,14 @@
 import express, { Request, Response } from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { createSessionRouter } from './routes/sessionRoutes';
 import { port } from './constants/environment';
+import { initializeWebSocketServer } from './services/websocketService';
 
 const app = express();
 const PORT = port;
+const server = createServer(app);
 
 // -----------------------------
 // Middleware
@@ -55,9 +58,16 @@ app.get('/health', (req: Request, res: Response) => {
 app.use(createSessionRouter(PORT));
 
 // -----------------------------
+// Initialize WebSocket Server
+// -----------------------------
+
+initializeWebSocketServer(server);
+
+// -----------------------------
 // Start server
 // -----------------------------
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
 });
