@@ -16,8 +16,8 @@ export const createSessionHandler = (port: number | string) => (req: Request, re
   const session = createSession();
   const baseUrl = getBaseUrl(port);
 
-  const kioskUrl = `${baseUrl}/kiosk?token=${session.token}`;
-  const mobileUrl = `${baseUrl}/m/session?token=${session.token}`;
+  const kioskUrl = `${baseUrl}/kiosk/qr?session=${session.token}`;
+  const mobileUrl = `${baseUrl}/mobile/upload?session=${session.token}`;
 
   res.status(201).json({
     token: session.token,
@@ -38,10 +38,8 @@ export const uploadImageHandler = (port: number | string) => (req: Request, res:
     return res.status(400).json({ error: 'No image file uploaded' });
   }
 
-  // Store the image
   setSessionImage(token, req.file.path);
 
-  // Build image URL for frontend
   const baseUrl = process.env.PUBLIC_BASE_URL || `http://localhost:${port}`;
   const imageUrl = `${baseUrl}/session/${token}/image`;
 
