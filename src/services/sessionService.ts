@@ -1,13 +1,22 @@
 import path from 'path';
 import fs from 'fs';
 
-export type SessionStatus = 'waiting' | 'image_ready' | 'printing' | 'printed' | 'error';
+export type SessionStatus =
+  | 'waiting'
+  | 'image_ready'
+  | 'payment_pending'
+  | 'paid'
+  | 'printing'
+  | 'printed'
+  | 'error';
 
 export interface Session {
   token: string;
   status: SessionStatus;
   imagePath?: string;
   createdAt: Date;
+  paid?: boolean;
+  paymentIntentId?: string;
 }
 
 const sessions = new Map<string, Session>();

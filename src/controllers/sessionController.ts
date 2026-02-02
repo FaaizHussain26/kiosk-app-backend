@@ -29,7 +29,7 @@ export const createSessionHandler = (port: number | string) => (req: Request, re
 
 export const uploadImageHandler = (port: number | string) => (req: Request, res: Response) => {
   const { token } = req.params;
-  const session = getSession(token);
+  const session = getSession(token as string);
 
   if (!session) {
     return res.status(404).json({ error: 'Session not found' });
@@ -38,13 +38,13 @@ export const uploadImageHandler = (port: number | string) => (req: Request, res:
     return res.status(400).json({ error: 'No image file uploaded' });
   }
 
-  setSessionImage(token, req.file.path);
+  setSessionImage(token as string, req.file.path);
 
   const baseUrl = process.env.PUBLIC_BASE_URL || `http://localhost:${port}`;
   const imageUrl = `${baseUrl}/session/${token}/image`;
 
   // Notify WebSocket clients (kiosk display) that image is ready
-  notifyImageReady(token, imageUrl);
+  notifyImageReady(token as string, imageUrl);
 
   res.json({
     message: 'Image uploaded successfully',
@@ -55,7 +55,7 @@ export const uploadImageHandler = (port: number | string) => (req: Request, res:
 
 export const getStatusHandler = (req: Request, res: Response) => {
   const { token } = req.params;
-  const session = getSession(token);
+  const session = getSession(token as string);
 
   if (!session) {
     return res.status(404).json({ error: 'Session not found' });
@@ -69,7 +69,7 @@ export const getStatusHandler = (req: Request, res: Response) => {
 
 export const getImageHandler = (req: Request, res: Response) => {
   const { token } = req.params;
-  const session = getSession(token);
+  const session = getSession(token as string);
 
   if (!session || !session.imagePath) {
     return res.status(404).json({ error: 'Image not found for this session' });
@@ -80,7 +80,7 @@ export const getImageHandler = (req: Request, res: Response) => {
 
 export const printHandler = async (req: Request, res: Response) => {
   const { token } = req.params;
-  const session = getSession(token);
+  const session = getSession(token as string);
 
   if (!session) {
     return res.status(404).json({ error: 'Session not found' });
@@ -90,17 +90,20 @@ export const printHandler = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'No image to print' });
   }
 
+  // TODO: Re-enable payment check when Stripe is integrated
+  // if (!session.paid) {
+  //   return res.status(402).json({ error: 'Payment required before printing' });
+  // }
+
   try {
-    // Update status and notify via WebSocket
-    updateSession(token, { status: 'printing' });
-    notifyStatusUpdate(token, 'printing', 'Print job started');
+    updateSession(token as string, { status: 'printing' });
+    notifyStatusUpdate(token as string, 'printing', 'Print job started');
 
     const imagePathToPrint = req.file?.path || session.imagePath!;
     await printImage(imagePathToPrint);
 
-    // Update status and notify via WebSocket
-    updateSession(token, { status: 'printed' });
-    notifyStatusUpdate(token, 'printed', 'Print job completed successfully');
+    updateSession(token as string, { status: 'printed' });
+    notifyStatusUpdate(token as string, 'printed', 'Print job completed successfully');
 
     res.json({
       message: 'Print job submitted',
@@ -108,8 +111,8 @@ export const printHandler = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error(error);
-    updateSession(token, { status: 'error' });
-    notifyStatusUpdate(token, 'error', 'Failed to print image');
+    updateSession(token as string, { status: 'error' });
+    notifyStatusUpdate(token as string, 'error', 'Failed to print image');
     res.status(500).json({ error: 'Failed to print image' });
   }
 };

@@ -8,6 +8,7 @@ import {
   printHandler,
   uploadImageHandler,
 } from '../controllers/sessionController';
+import { createPaymentIntentHandler, confirmPaymentHandler } from '../controllers/paymentController';
 import path from 'path';
 
 const router = Router();
@@ -28,6 +29,12 @@ export const createSessionRouter = (port: number | string) => {
   router.post('/session/:token/image', upload.single('image'), uploadImageHandler(port));
   router.get('/session/:token/status', getStatusHandler);
   router.get('/session/:token/image', getImageHandler);
+
+  // Stripe payment endpoints
+  router.post('/session/:token/payment-intent', createPaymentIntentHandler);
+  router.post('/session/:token/payment-confirm', confirmPaymentHandler);
+
+  // Print is only allowed after successful payment
   router.post('/session/:token/print', upload.single('image'), printHandler);
 
   return router;
