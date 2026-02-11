@@ -23,7 +23,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || '*')
 app.use(
   cors({
     origin: allowedOrigins.length === 1 && allowedOrigins[0] === '*' ? '*' : allowedOrigins,
-    credentials: true,
+    credentials: true,  
   })
 );
 
