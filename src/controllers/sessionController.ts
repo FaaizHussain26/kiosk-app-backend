@@ -95,7 +95,7 @@ export const printHandler = async (req: Request, res: Response) => {
   //   return res.status(402).json({ error: 'Payment required before printing' });
   // }
 
-  try {
+  // try {
     updateSession(token as string, { status: 'printing' });
     notifyStatusUpdate(token as string, 'printing', 'Print job started');
 
@@ -109,12 +109,12 @@ export const printHandler = async (req: Request, res: Response) => {
       message: 'Print job submitted',
       status: 'printed',
     });
-  } catch (error) {
-    console.error(error);
+  // } catch (error) {
+    // console.error(error);
     updateSession(token as string, { status: 'error' });
     notifyStatusUpdate(token as string, 'error', 'Failed to print image');
     res.status(500).json({ error: 'Failed to print image' });
-  }
+  // }
 };
 
 
