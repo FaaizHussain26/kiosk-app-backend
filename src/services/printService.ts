@@ -17,7 +17,7 @@
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-
+ 
 const execAsync = promisify(exec);
 
 const PRINTER_IP        = process.env.PRINTER_IP || '';
