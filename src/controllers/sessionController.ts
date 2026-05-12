@@ -90,31 +90,23 @@ export const printHandler = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'No image to print' });
   }
 
-  // TODO: Re-enable payment check when Stripe is integrated
-  // if (!session.paid) {
-  //   return res.status(402).json({ error: 'Payment required before printing' });
-  // }
+  updateSession(token as string, { status: 'printing' });
+  notifyStatusUpdate(token as string, 'printing', 'Print job started');
 
-  // try {
-    updateSession(token as string, { status: 'printing' });
-    notifyStatusUpdate(token as string, 'printing', 'Print job started');
-
+  try {
     const imagePathToPrint = req.file?.path || session.imagePath!;
     await printImage(imagePathToPrint);
 
     updateSession(token as string, { status: 'printed' });
-    notifyStatusUpdate(token as string, 'printed', 'Print job completed successfully');
+    notifyStatusUpdate(token as string, 'printed', 'Print job completed');
 
-    res.json({
-      message: 'Print job submitted',
-      status: 'printed',
-    });
-  // } catch (error) {
-    // console.error(error);
+    res.json({ message: 'Print job submitted', status: 'printed' });
+  } catch (error) {
+    console.error('[print] Error:', error);
     updateSession(token as string, { status: 'error' });
-    notifyStatusUpdate(token as string, 'error', 'Failed to print image');
+    notifyStatusUpdate(token as string, 'error', 'Print failed');
     res.status(500).json({ error: 'Failed to print image' });
-  // }
+  }
 };
 
 
