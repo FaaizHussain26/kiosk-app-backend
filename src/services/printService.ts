@@ -32,6 +32,7 @@ const PRINTER_QUALITY  = process.env.PRINTER_QUALITY || '5';
 const PRINTER_ORIENT   = process.env.PRINTER_ORIENTATION || '3';
 
 export const printImage = async (imagePath: string): Promise<void> => {
+  console.log("printing image on ip via socket:",PRINTER_IP)
   if (PRINTER_IP) {
     await printViaSocket(imagePath);
   } else if (USE_CUPS) {
@@ -61,10 +62,10 @@ const printViaSocket = (imagePath: string): Promise<void> => {
     socket.setTimeout(TIMEOUT_MS);
 
     socket.connect(PRINTER_PORT, PRINTER_IP, () => {
-      console.log('[print] Socket connected — sending image data...');
+      console.log('[Print] Socket connected — sending image data...');
       socket.write(imageData, (writeErr) => {
         if (writeErr) {
-          cleanup(new Error(`Socket write error: ${writeErr.message}`));
+          cleanup(new Error(`[Print] Socket write error: ${writeErr.message}`));
           return;
         }
         socket.end();
@@ -77,11 +78,11 @@ const printViaSocket = (imagePath: string): Promise<void> => {
     });
 
     socket.on('timeout', () => {
-      cleanup(new Error(`Socket timed out after ${TIMEOUT_MS / 1000}s`));
+      cleanup(new Error(`[Print] Socket timed out after ${TIMEOUT_MS / 1000}s`));
     });
 
     socket.on('error', (err) => {
-      cleanup(new Error(`Socket error: ${err.message}`));
+      cleanup(new Error(`[Print] Socket error: ${err.message}`));
     });
   });
 };

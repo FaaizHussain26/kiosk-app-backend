@@ -81,7 +81,7 @@ export const getImageHandler = (req: Request, res: Response) => {
 export const printHandler = async (req: Request, res: Response) => {
   const { token } = req.params;
   const session = getSession(token as string);
-
+console.log("printing:",token)
   if (!session) {
     return res.status(404).json({ error: 'Session not found' });
   }
