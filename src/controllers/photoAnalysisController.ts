@@ -6,6 +6,7 @@ export const analyzePhotoHandler = async (req: Request, res: Response) => {
   const { token } = req.params;
 console.log("analyzePhotoHandler called with token:", token);
   const session = getSession(token as string);
+  console.log("Session retrieved for token:", token, "session:", session);
   if (!session) {
     return res.status(404).json({ error: 'Session not found' });
   }

@@ -5,9 +5,9 @@ dotenv.config();
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-
+console.log('[photoAnalysis] Using OpenAI model:', openaiModel);
 if (!openaiApiKey) {
-  console.warn(
+  console.log(
     '[photoAnalysis] OPENAI_API_KEY is not set. Filter recommendations will fall back to defaults.'
   );
 }
