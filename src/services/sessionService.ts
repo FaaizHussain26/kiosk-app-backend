@@ -10,6 +10,13 @@ export type SessionStatus =
   | 'printed'
   | 'error';
 
+export type FilterType = 'original' | 'warm' | 'cool' | 'pastel' | 'mono' | 'sepia';
+
+export interface AiRecommendation {
+  filter: FilterType;
+  brightness: number;
+}
+
 export interface Session {
   token: string;
   status: SessionStatus;
@@ -17,6 +24,7 @@ export interface Session {
   createdAt: Date;
   paid?: boolean;
   paymentIntentId?: string;
+  aiRecommendation?: AiRecommendation;
 }
 
 const sessions = new Map<string, Session>();

@@ -5,6 +5,7 @@ import {
   getSession,
   setSessionImage,
   updateSession,
+  SessionStatus,
 } from '../services/sessionService';
 import { printImage } from '../services/printService';
 import { notifyImageReady, notifyStatusUpdate } from '../services/websocketService';
@@ -107,6 +108,32 @@ console.log("printing:",token)
     notifyStatusUpdate(token as string, 'error', 'Print failed');
     res.status(500).json({ error: 'Failed to print image' });
   }
+};
+
+/**
+ * Lightweight status-only endpoint for on-device (native AirPrint) printing —
+ * no image upload, no server-side printing. Just keeps session status and
+ * WebSocket listeners in sync with what happened on the kiosk.
+ */
+const PRINT_STATUSES: SessionStatus[] = ['printing', 'printed', 'error'];
+
+export const printStatusHandler = (req: Request, res: Response) => {
+  const { token } = req.params;
+  const { status } = req.body as { status?: SessionStatus };
+  const session = getSession(token as string);
+
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  if (!status || !PRINT_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Invalid print status' });
+  }
+
+  updateSession(token as string, { status });
+  notifyStatusUpdate(token as string, status, `Print ${status}`);
+
+  res.json({ status });
 };
 
 

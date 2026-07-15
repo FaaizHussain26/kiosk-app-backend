@@ -6,9 +6,11 @@ import {
   getImageHandler,
   getStatusHandler,
   printHandler,
+  printStatusHandler,
   uploadImageHandler,
 } from '../controllers/sessionController';
 import { createPaymentIntentHandler, confirmPaymentHandler } from '../controllers/paymentController';
+import { analyzePhotoHandler } from '../controllers/photoAnalysisController';
 import path from 'path';
 
 const router = Router();
@@ -36,6 +38,12 @@ export const createSessionRouter = (port: number | string) => {
 
   // Print is only allowed after successful payment
   router.post('/session/:token/print', upload.single('image'), printHandler);
+
+  // Status-only ping for on-device (native AirPrint) printing — no image upload
+  router.post('/session/:token/print-status', printStatusHandler);
+
+  // AI-recommended filter/brightness for the editing screen
+  router.post('/session/:token/analyze-photo', analyzePhotoHandler);
 
   return router;
 };
