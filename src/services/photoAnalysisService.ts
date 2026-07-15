@@ -1,5 +1,5 @@
-import fs from 'fs';
 import dotenv from 'dotenv';
+import sharp from 'sharp';
 import { getSession, updateSession, AiRecommendation, FilterType } from './sessionService';
 dotenv.config();
 
@@ -30,8 +30,11 @@ const parseRecommendation = (raw: string): AiRecommendation => {
 };
 
 const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRecommendation> => {
-  const imageBase64 = fs.readFileSync(imagePath).toString('base64');
-  const dataUri = `data:image/jpeg;base64,${imageBase64}`;
+  const compressed = await sharp(imagePath)
+    .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  const dataUri = `data:image/jpeg;base64,${compressed.toString('base64')}`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -81,6 +84,26 @@ const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRec
   return parseRecommendation(content);
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const requestRecommendationWithRetry = async (
+  imagePath: string,
+  attempts = 3,
+  delayMs = 700
+): Promise<AiRecommendation> => {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await requestRecommendationFromOpenAI(imagePath);
+    } catch (error) {
+      lastError = error;
+      console.error(`[photoAnalysis] Attempt ${attempt}/${attempts} failed:`, error);
+      if (attempt < attempts) await sleep(delayMs);
+    }
+  }
+  throw lastError;
+};
+
 export const analyzePhotoForSession = async (token: string): Promise<AiRecommendation> => {
   console.log('getting session for token:', token);
   const session = getSession(token);
@@ -97,18 +120,22 @@ console.log('session called for token:', token, 'session:', session);
   }
 
   let recommendation: AiRecommendation;
+  let fromOpenAI = false;
   console.log('[photoAnalysis] Analyzing photo for session:', token, 'imagePath:', session.imagePath);
   if (!openaiApiKey) {
     recommendation = DEFAULT_RECOMMENDATION;
   } else {
     try {
-      recommendation = await requestRecommendationFromOpenAI(session.imagePath);
+      recommendation = await requestRecommendationWithRetry(session.imagePath);
+      fromOpenAI = true;
     } catch (error) {
-      console.error('[photoAnalysis] Falling back to default recommendation:', error);
+      console.error('[photoAnalysis] All retries failed, falling back to default recommendation:', error);
       recommendation = DEFAULT_RECOMMENDATION;
     }
   }
 
-  updateSession(token, { aiRecommendation: recommendation });
+  if (fromOpenAI) {
+    updateSession(token, { aiRecommendation: recommendation });
+  }
   return recommendation;
 };
