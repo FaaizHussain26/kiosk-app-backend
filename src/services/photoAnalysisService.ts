@@ -82,8 +82,9 @@ const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRec
 };
 
 export const analyzePhotoForSession = async (token: string): Promise<AiRecommendation> => {
+  console.log('getting session for token:', token);
   const session = getSession(token);
-
+console.log('session called for token:', token, 'session:', session);
   if (!session) {
     throw new Error('Session not found');
   }
@@ -96,6 +97,7 @@ export const analyzePhotoForSession = async (token: string): Promise<AiRecommend
   }
 
   let recommendation: AiRecommendation;
+  console.log('[photoAnalysis] Analyzing photo for session:', token, 'imagePath:', session.imagePath);
   if (!openaiApiKey) {
     recommendation = DEFAULT_RECOMMENDATION;
   } else {
