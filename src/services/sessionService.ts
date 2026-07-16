@@ -15,6 +15,9 @@ export type FilterType = 'original' | 'warm' | 'cool' | 'pastel' | 'mono' | 'sep
 export interface AiRecommendation {
   filter: FilterType;
   brightness: number;
+  contrast: number;
+  saturation: number;
+  warmth: number;
 }
 
 export interface Session {

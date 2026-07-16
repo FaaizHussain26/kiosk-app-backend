@@ -13,12 +13,18 @@ if (!openaiApiKey) {
 }
 
 const ALLOWED_FILTERS: FilterType[] = ['original', 'warm', 'cool', 'pastel', 'mono', 'sepia'];
-const DEFAULT_RECOMMENDATION: AiRecommendation = { filter: 'original', brightness: 100 };
+const DEFAULT_RECOMMENDATION: AiRecommendation = {
+  filter: 'original',
+  brightness: 100,
+  contrast: 100,
+  saturation: 100,
+  warmth: 0,
+};
 
-const clampBrightness = (value: unknown): number => {
+const clampInRange = (value: unknown, min: number, max: number, fallback: number): number => {
   const num = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(num)) return 100;
-  return Math.min(150, Math.max(50, Math.round(num)));
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(num)));
 };
 
 const parseRecommendation = (raw: string): AiRecommendation => {
@@ -26,7 +32,13 @@ const parseRecommendation = (raw: string): AiRecommendation => {
   const filter: FilterType = ALLOWED_FILTERS.includes(parsed?.filter)
     ? parsed.filter
     : 'original';
-  return { filter, brightness: clampBrightness(parsed?.brightness) };
+  return {
+    filter,
+    brightness: clampInRange(parsed?.brightness, 50, 150, 100),
+    contrast: clampInRange(parsed?.contrast, 50, 150, 100),
+    saturation: clampInRange(parsed?.saturation, 0, 200, 100),
+    warmth: clampInRange(parsed?.warmth, -30, 30, 0),
+  };
 };
 
 const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRecommendation> => {
@@ -50,7 +62,7 @@ const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRec
         {
           role: 'system',
           content:
-            'You are a photo editing assistant for a postcard-printing kiosk. You recommend the best-fitting filter and brightness for a photo, similar to a Lightroom "Auto" suggestion.',
+            'You are a photo editing assistant for a postcard-printing kiosk. You recommend the best-fitting filter, brightness, contrast, saturation, and warmth for a photo, similar to a Lightroom "Auto" suggestion.',
         },
         {
           role: 'user',
@@ -58,11 +70,14 @@ const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRec
             {
               type: 'text',
               text:
-                'Analyze this photo and recommend the best filter and brightness for printing it as a postcard. ' +
+                'Analyze this photo and recommend the best filter and adjustment values for printing it as a postcard. ' +
                 'The filter MUST be exactly one of: "original", "warm", "cool", "pastel", "mono", "sepia". ' +
                 'Brightness MUST be an integer between 50 and 150 (100 = neutral/unchanged). ' +
+                'Contrast MUST be an integer between 50 and 150 (100 = neutral/unchanged). ' +
+                'Saturation MUST be an integer between 0 and 200 (100 = neutral/unchanged, 0 = grayscale). ' +
+                'Warmth MUST be an integer between -30 and 30 (0 = neutral, negative = cooler/bluer, positive = warmer). ' +
                 'Respond with ONLY a JSON object in this exact shape, no other text: ' +
-                '{"filter": "...", "brightness": number, "reason": "short reason"}',
+                '{"filter": "...", "brightness": number, "contrast": number, "saturation": number, "warmth": number, "reason": "short reason"}',
             },
             { type: 'image_url', image_url: { url: dataUri } },
           ],
@@ -70,13 +85,14 @@ const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRec
       ],
     }),
   });
-
+console.log("response got from OpenAI:", response);
   if (!response.ok) {
     throw new Error(`OpenAI request failed: ${response.status} ${await response.text()}`);
   }
 
   const data = (await response.json()) as any;
   const content = data?.choices?.[0]?.message?.content;
+  console.log("OpenAI response content:", content);
   if (typeof content !== 'string') {
     throw new Error('OpenAI response missing message content');
   }
