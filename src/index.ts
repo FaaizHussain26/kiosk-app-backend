@@ -27,8 +27,20 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Skip JSON/urlencoded parsers for multipart uploads so they never touch the
+// raw request stream before multer/busboy.
+const jsonParser = express.json();
+const urlencodedParser = express.urlencoded({ extended: true });
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return next();
+  }
+  jsonParser(req, res, (err) => {
+    if (err) return next(err);
+    urlencodedParser(req, res, next);
+  });
+});
 
 // -----------------------------
 // Basic routes
@@ -52,10 +64,19 @@ app.use(createSessionRouter(PORT));
 // Error handling
 // -----------------------------
 
-const isAbortedUploadError = (err: Error): boolean =>
+const isUploadParseError = (err: Error): boolean =>
   err.name === 'MulterError' ||
   err.message === 'Unexpected end of form' ||
-  err.message === 'Unexpected end of file';
+  err.message === 'Unexpected end of file' ||
+  err.message === 'Multipart: Boundary not found' ||
+  err.message.startsWith('Multipart:');
+
+const tokenFromRequest = (req: Request): string | undefined => {
+  const fromParams = (req.params as { token?: string }).token;
+  if (fromParams) return fromParams;
+  const match = req.originalUrl?.match(/\/session\/([^/]+)\//);
+  return match?.[1];
+};
 
 // Must be mounted last, and must keep the 4-arg (err, req, res, next) signature
 // for Express to recognize it as error-handling middleware.
@@ -65,12 +86,24 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     return;
   }
 
-  const { token } = req.params as { token?: string };
-  if (token && isAbortedUploadError(err)) {
-    updateSession(token, { status: 'error' });
-    notifyStatusUpdate(token, 'error', 'Upload failed');
-    console.warn(`[upload] Aborted upload for session ${token}: ${err.message}`);
-    return res.status(400).json({ error: 'Upload was interrupted or invalid. Please try again.' });
+  if (isUploadParseError(err)) {
+    const token = tokenFromRequest(req);
+    console.warn('[upload] Parse failed', {
+      message: err.message,
+      method: req.method,
+      url: req.originalUrl,
+      contentType: req.headers['content-type'],
+      contentLength: req.headers['content-length'],
+      token,
+    });
+    if (token) {
+      updateSession(token, { status: 'error' });
+      notifyStatusUpdate(token, 'error', 'Upload failed');
+    }
+    return res.status(400).json({
+      error: 'Upload was interrupted or invalid. Please try again.',
+      detail: err.message,
+    });
   }
 
   console.error('[error]', err);
