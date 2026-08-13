@@ -57,12 +57,18 @@ const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRec
     body: JSON.stringify({
       model: openaiModel,
       response_format: { type: 'json_object' },
-      max_tokens: 200,
+      max_tokens: 250,
+      temperature: 0.4,
       messages: [
         {
           role: 'system',
           content:
-            'You are a photo editing assistant for a postcard-printing kiosk. You recommend the best-fitting filter, brightness, contrast, saturation, and warmth for a photo, similar to a Lightroom "Auto" suggestion.',
+            'You are a professional photo colorist for a postcard-printing kiosk at scenic travel destinations ' +
+            '(national parks, resorts). Guest photos are typically outdoor scenery, landscapes, or vacation ' +
+            'snapshots shot in widely varying light — bright midday sun, overcast haze, golden hour, deep shade. ' +
+            'Your job is to pick the filter and adjustments that make THIS specific photo look its best as a ' +
+            'printed keepsake, the way an experienced photo editor would color-grade it — not a generic ' +
+            'one-size-fits-all preset applied without looking at the photo.',
         },
         {
           role: 'user',
@@ -70,12 +76,23 @@ const requestRecommendationFromOpenAI = async (imagePath: string): Promise<AiRec
             {
               type: 'text',
               text:
-                'Analyze this photo and recommend the best filter and adjustment values for printing it as a postcard. ' +
-                'The filter MUST be exactly one of: "original", "warm", "cool", "pastel", "mono", "sepia". ' +
-                'Brightness MUST be an integer between 50 and 150 (100 = neutral/unchanged). ' +
-                'Contrast MUST be an integer between 50 and 150 (100 = neutral/unchanged). ' +
-                'Saturation MUST be an integer between 0 and 200 (100 = neutral/unchanged, 0 = grayscale). ' +
-                'Warmth MUST be an integer between -30 and 30 (0 = neutral, negative = cooler/bluer, positive = warmer). ' +
+                "Look closely at this photo's actual lighting, color cast, and contrast before deciding — a " +
+                'flat overcast shot needs different treatment than one in harsh midday sun or golden-hour glow. ' +
+                'Then recommend the filter and adjustment values that make THIS photo look best printed as a postcard.\n\n' +
+                'Filter guide — pick whichever best matches the photo\'s actual character; do not default to ' +
+                '"original" unless the photo is already well-balanced and any filter would look forced:\n' +
+                '- "warm": golden/amber tones — sunset, autumn, desert scenes, or a flat/cool photo that needs inviting warmth.\n' +
+                '- "cool": blue-leaning tones — water, snow, forest scenes, or an overly orange photo that needs balancing.\n' +
+                '- "pastel": soft, muted, airy tones — hazy, bright, or soft-light scenes.\n' +
+                '- "mono": black & white — high-contrast or dramatic scenes where color is a distraction.\n' +
+                '- "sepia": vintage brown tone — nostalgic or rustic subject matter.\n' +
+                '- "original": only when the photo\'s color is already well-balanced.\n\n' +
+                'Adjustment guide — make a real judgment call based on what you actually see; do not default ' +
+                'everything to neutral unless the photo is already well-exposed and balanced:\n' +
+                '- Brightness (50-150, 100=neutral): raise for underexposed/shadowed photos, lower for blown-out/overexposed ones.\n' +
+                '- Contrast (50-150, 100=neutral): raise for flat/hazy photos, lower for already-harsh/high-contrast ones.\n' +
+                '- Saturation (0-200, 100=neutral): raise for dull/washed-out color, lower for oversaturated/artificial-looking color.\n' +
+                '- Warmth (-30 to 30, 0=neutral): positive to warm up a cool/blue-cast photo, negative to cool down an overly warm/orange-cast one.\n\n' +
                 'Respond with ONLY a JSON object in this exact shape, no other text: ' +
                 '{"filter": "...", "brightness": number, "contrast": number, "saturation": number, "warmth": number, "reason": "short reason"}',
             },
