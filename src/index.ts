@@ -78,6 +78,12 @@ const tokenFromRequest = (req: Request): string | undefined => {
   return match?.[1];
 };
 
+// req.params is scoped to the router layer that matched the route; by the time an
+// error bubbles up to this app-level handler, Express has already restored req.params
+// to the outer (empty) scope. Pull the token back out of the path directly instead.
+const extractSessionToken = (req: Request): string | undefined =>
+  req.path.match(/^\/session\/([^/]+)\/(?:image|print)\b/)?.[1];
+
 // Must be mounted last, and must keep the 4-arg (err, req, res, next) signature
 // for Express to recognize it as error-handling middleware.
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
